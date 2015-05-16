@@ -1,3 +1,6 @@
 source "https://rubygems.org"
 
-gem "rspec"
+gem 'rspec', '~>3.2'
+gem 'sinatra', '~>1.4'
+gem 'sinatra-contrib', '~>1.4'
+gem 'tilt', '~>1.3'
