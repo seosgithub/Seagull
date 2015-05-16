@@ -1,6 +1,6 @@
 {
   "name": "Seagull",
-  "main": "index.html",
+  "main": "public/index.html",
   "version": "0.0.1",
   "window": {
     "toolbar": false,

@@ -15,4 +15,10 @@ namespace(:gui) do
       Build.run
     end
   end
+
+  task :run => [:build] do
+    Dir.chdir './gui/' do
+      system('nw .')
+    end
+  end
 end
