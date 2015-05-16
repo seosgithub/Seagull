@@ -1,5 +1,0 @@
-{
-  'variables': {
-    'appname': "Brackets",
-  }
-}
