@@ -10,9 +10,9 @@
 #symlink to this file
 namespace(:gui) do
   task :build do
-    FileUtils.mkdir_p "./gui/public/"
     Dir.chdir './gui/' do
-      `touch './public/index.html'`
+      require './lib/build'
+      Build.run
     end
   end
 end
