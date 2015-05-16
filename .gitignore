@@ -57,3 +57,4 @@ appshell/gtk
 appshell/gtk/*
 
 appshell/node-core/node_modules
+./gui/public
