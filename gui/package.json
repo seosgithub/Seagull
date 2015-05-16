@@ -6,6 +6,8 @@
     "toolbar": false,
     "title": "Seagull",
     "width": 1024,
-    "height": 768
+    "height": 768,
+    "min_width": 800,
+    "min_height": 500
   }
 }

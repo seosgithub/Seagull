@@ -28,7 +28,7 @@ module Build
 
       @css = Dir["./app/assets/stylesheets/**/*.css"].select{|e| File.file?(e)}.reduce("") {|s, e| s << File.read(e) << "\n"}
 
-      @html = Dir["./app/assets/views/**/*.html"].select{|e| File.file?(e)}.reduce("") {|s, e| s << File.read(e) << "\n"}
+      @html = Dir["./app/views/**/*.html"].select{|e| File.file?(e)}.reduce("") {|s, e| s << File.read(e) << "\n"}
     end
 
     def get_binding
