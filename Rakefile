@@ -1,3 +1,5 @@
+require 'rspec/core/rake_task'
+
 #namespace(:spec) do
   #task :services do
     #Dir.chdir 'services' do
@@ -28,7 +30,9 @@ namespace(:services) do
     Dir.chdir './services' do
       gui_port = ENV['GUI_PORT']
       raise "Set GUI_PORT via GUI_PORT=XXXX" unless gui_port
-      system('node main.js')
+      exec('node main.js')
     end
   end
 end
+
+RSpec::Core::RakeTask.new(:spec)
