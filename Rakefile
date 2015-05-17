@@ -22,3 +22,13 @@ namespace(:gui) do
     end
   end
 end
+
+namespace(:services) do
+  task :run do
+    Dir.chdir './services' do
+      gui_port = ENV['GUI_PORT']
+      raise "Set GUI_PORT via GUI_PORT=XXXX" unless gui_port
+      system('node main.js')
+    end
+  end
+end
