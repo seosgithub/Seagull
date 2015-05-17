@@ -3,7 +3,7 @@
   "main": "public/index.html",
   "version": "0.0.1",
   "window": {
-    "toolbar": false,
+    "toolbar": true,
     "title": "Seagull",
     "width": 1024,
     "height": 768,

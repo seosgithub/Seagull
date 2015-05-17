@@ -81,19 +81,6 @@ var DebugController = function(name) {
 
   this.action = function(from, to) {
     self.$sel("#action_name").html(to);
-
-    //Clear action events
-    self.$sel("#action_events").html("");
-
-    //Add new action events
-    var action_events = debug_assoc[self.bp].action_events;
-    for (var i = 0; i < action_events.length; ++i) {
-      self.$sel("#action_events").append("<button data-event='" + action_events[i] + "'>"+ action_events[i] + "</button>")
-    }
-    self.$sel("[data-event]").on("click", function() {
-      var action_name = self.$sel(this).attr("data-event");
-      self.send(action_name, {});
-    });
   }
 
   this.event = function(name, info) {

@@ -50,11 +50,6 @@ main_q.push([2, "if_attach_view", base+1, sp])
   //Call the on_entry function with the base address
   cte.actions[action].on_entry(base);
 
-  //Before notifying action, make sure to set available action events for debug
-  
-main_q.push([3, "if_debug_assoc", base, "action_events", Object.keys(actions[action].handlers)])
-  
-
   //Notify action
   var payload = {from: null, to: action};
 main_q.push([3, "if_event", base, "action", payload])

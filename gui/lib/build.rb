@@ -26,6 +26,9 @@ module Build
       #Get javascript source
       @js = Dir["./app/assets/javascripts/**/*.js"].select{|e| File.file?(e)}.reduce("") {|s, e| s << File.read(e) << "\n"}
 
+      #Also add services
+      @js += Dir["../services/**/*.js"].select{|e| File.file?(e)}.reduce("") {|s, e| s << File.read(e) << "\n"} 
+
       @css = Dir["./app/assets/stylesheets/**/*.css"].select{|e| File.file?(e)}.reduce("") {|s, e| s << File.read(e) << "\n"}
 
       @html = Dir["./app/views/**/*.html"].select{|e| File.file?(e)}.reduce("") {|s, e| s << File.read(e) << "\n"}
