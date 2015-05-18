@@ -1,16 +1,48 @@
 //Import express
 var express = require('express');
+var ws = require("nodejs-websocket")
+var ios = require('socket.io')();
+
 var app = express();
 
+clients = []
+
 app.get('/search', function (req, res) {
-  res.json([ { name: "Chrome (localhost)", platform: "chrome", info: "onotho"}])
+  res.json(clients)
 });
 
 //Start GUI Rest services
-var guiPort = process.env.GUI_PORT || 3333;
-var server = app.listen(guiPort, function () {
+var server = app.listen(3334, function () {
   var host = server.address().address;
   var port = server.address().port;
-
-  console.log('SERVICES STARTED');
 });
+
+var socketToId = {};
+
+ios.on('connection', function(socket) {
+  var id = "hello";
+  clients.push({
+    name: "Chrome (localhost)",
+    platform: "chrome",
+    id: id,
+  });
+
+  socketToId[socket] = id;
+
+  socket.on("disconnect", function() {
+    var idx = -1;
+    for (var i = 0; i < clients.length; ++i) {
+      if (clients[i].id === socketToId[socket]) {
+        idx = i;
+        break;
+      }
+    }
+    clients.splice(idx, 1);
+  });
+});
+ios.listen(9999);
+
+function go() {
+  console.log("SERVICES_STARTED");
+}
+setTimeout(go, 1000)

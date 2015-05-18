@@ -31,6 +31,7 @@ h1 {
 
 [data-name='container_split'] .parent {
   display: flex;
+  height: 500px;
 }
 
 [data-name='container_split'] .parent > .spot[data-name='content'] {

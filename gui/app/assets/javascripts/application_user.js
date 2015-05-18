@@ -627,6 +627,45 @@ net_q.push([4, "if_net_req", "GET", info.url, info.params, tp])
   }
   //////////////////////////////////////////////////
 
+  //////////////////////////////////////////////////
+  //Start of timer on_init
+  
+    //Entries in the timer event table are stored as an array of arrays, each array
+    //contains [N, bp, event_name]
+
+    var timer_evt = [];
+    //Call an event N times per second
+    function reg_timer_ev(n, bp, ename) {
+      timer_evt.push([n, bp, ename]);
+    }
+
+    //Timer position
+    var ttick = 0;
+    function int_timer() {
+      ttick += 1;
+
+      for (var i = 0; i < timer_evt.length; ++i) {
+        if (ttick % timer_evt[i][0] == 0) {
+          var bp = timer_evt[i][1];
+          var ename = timer_evt[i][2];
+          int_event(bp, ename, {});
+        }
+      }
+    }
+  
+
+  //////////////////////////////////////////////////
+
+  //////////////////////////////////////////////////
+  //Start of timer on_request
+  function service_timer_req(info, ep, ename) {
+    
+    timer_evt.push([info.ticks, ep, ename]);
+  
+
+  }
+  //////////////////////////////////////////////////
+
 MODS = ['ui', 'event', 'net', 'segue', 'controller', 'debug'];
 PLATFORM = 'CHROME';
 function int_embed_surface(sp) {
@@ -715,6 +754,17 @@ reg("modal", "nav_container", "nav_container.detach");
 reg("unmodal", "nav_container", "nav_container.attach");
 
 //Debug stub
+function int_debug_eval(str) {
+  var res = eval(str);
+  var payload = {
+    res: res
+  }
+main_q.push([3, "if_event", -333, "eval_res", payload])
+}
+
+function debug_eval_spec() {
+  return 'hello';
+}
 ctable = {
   
       hierarchy: {
@@ -751,7 +801,7 @@ ctable = {
 
                   //The 'context' which is user-defined
                   var context = __info__.context;
-                  var ptr = _embed("rotate", __base__+1+1, {}, __base__);
+                  var ptr = _embed("splash", __base__+1+1, {}, __base__);
             __info__.embeds.push(ptr);
           
 
@@ -801,23 +851,44 @@ ctable = {
                   //The 'context' which is user-defined
                   var context = __info__.context;
                   var info = {
-        url: "http://localhost:3000/search",
+        ticks: 4,
+      }
+
+            service_timer_req(info, __base__, "tick");
+                },
+                handlers: {
+                  
+                    tick: function(__base__, params) {
+                      var __info__ = tel_deref(__base__);
+                      var context = __info__.context;
+
+                      
+      console.log("tick");
+      var info = {
+        url: "http://localhost:3334/search",
         params: {},
       }
 
             service_rest_req(info, __base__, "search_res");
-                },
-                handlers: {
+              
+
+                    },
                   
                     search_res: function(__base__, params) {
                       var __info__ = tel_deref(__base__);
                       var context = __info__.context;
 
                       
-      var info = {name: params.info[0].name};
+      var device = params.info[0];
+      if (device != undefined) {
+        var info = {name: params.info[0].name};
 
            main_q.push([3, "if_event", __base__, "found", info])
-              
+                } else {
+
+           main_q.push([3, "if_event", __base__, "found", null])
+                }
+    
 
                     },
                   

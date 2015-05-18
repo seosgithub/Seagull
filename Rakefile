@@ -29,7 +29,9 @@ namespace(:services) do
   task :run do
     Dir.chdir './services' do
       gui_port = ENV['GUI_PORT']
+      debug_chrome_ws_port = ENV['DEBUG_CHROME_WS_PORT']
       raise "Set GUI_PORT via GUI_PORT=XXXX" unless gui_port
+      raise "Set DEBUG_CHROME_WS_PORT via DEBUG_CHROME_WS_PORT=XXXX" unless debug_chrome_ws_port
       exec('node main.js')
     end
   end

@@ -4,7 +4,7 @@ controller :root do
     
   action :splash do 
     on_entry %{
-      Embed("rotate", "content", {})
+      Embed("splash", "content", {})
       Embed("hierarchy", "sidebar", {})
     }
   end
