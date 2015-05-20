@@ -55,6 +55,23 @@ FlokController = function() {
   this.init = function() {
   }
 
+  //Called after init automatically to apply special helper bindings
+  this.apply_helpers = function() {
+    var self = this;
+
+    //Emit an event
+    this.$sel("[data-emit]").on("click", function() {
+      var name = $(this).attr("data-emit");
+      self.send(name, {});
+    });
+
+    //Set the HTML
+    this.$sel("[data-puts]").each(function() {
+      var name = $(this).attr("data-puts");
+      $(this).html(self.context[name]);
+    });
+  }
+
   //Send a message
   this.send = function(name, info) {
     int_dispatch([3, "int_event", this.bp, name, info]);
@@ -110,6 +127,8 @@ function if_controller_init(bp, rvp, name, info) {
   
     if (if_ui_tp_to_selector[rvp].attr("data-debug") === '1') {
       reg_controllers[name] = DebugController;
+    } else if (reg_controllers[name] === undefined) {
+      reg_controllers[name] = FlokController;
     }
   
 
@@ -134,6 +153,7 @@ function if_controller_init(bp, rvp, name, info) {
 
     //Initialize
     cinstances[bp].init();
+    cinstances[bp].apply_helpers(); //emit, puts
   }
 }
 
@@ -184,6 +204,21 @@ function if_debug_assoc(base, key, value) {
   debug_assoc[base][key] = value;
 }
 
+function if_debug_highlight_view(vp, on) {
+  //Get the view or spot
+  var $e = if_ui_tp_to_selector[vp];
+
+  if ($e) {
+    if (on) {
+      $e.css("background-color", "blue");
+      $e.css("-webkit-filter", "invert(75%)");
+    } else {
+      $e.css("background-color", "");
+      $e.css("-webkit-filter", "");
+    }
+  }
+}
+
 function if_debug_spec_assoc(base, key) {
   int_dispatch([1, "spec", debug_assoc[base][key]])
 } 
@@ -226,9 +261,6 @@ $(document).ready(function() {
     });
   });
 });
-
-//Start up the socket.io client
-debug_socket = null;
 
 //When forwading events to if_dispatch, if_dispatch will
 //normally send those events back to to the server, but
@@ -346,6 +378,41 @@ function segue(name, call_this) {
   if_segue_name_to_call[name] = call_this;
 }
 
+sp_to_sockio = {}
+
+function if_sockio_init(url, sp) {
+  sp_to_sockio[sp] = io(url);
+}
+
+function if_sockio_fwd(sp, event_name, bp) {
+  //Grab socket
+  var socket = sp_to_sockio[sp];
+
+  if (socket) {
+    //Forward events
+    socket.on(event_name, function(info) {
+      int_dispatch([3, "int_event", bp, event_name, info]);
+    });
+  } else {
+    
+      console.error("Couldnt fwd sockio with sp: " + sp + " (It dspn't exist)");
+    
+  }
+}
+
+function if_sockio_send(sp, event_name, info) {
+  //Grab socket
+  var socket = sp_to_sockio[sp];
+
+  if (socket) {
+    socket.emit(event_name, info);
+  } else {
+    
+      console.error("Couldnt fwd sockio with sp: " + sp + " (It dspn't exist)");
+    
+  }
+}
+
 function timer_callback() {
   //Call timer interrupt
   int_dispatch([0, "int_timer"]);
@@ -358,6 +425,7 @@ function if_timer_init(tps) {
 
 //Create a new surface based on a prototype name and information.
 //Store that view in our own pointer table that uses selectors
+//Both spots and views
 if_ui_tp_to_selector = {};
 
 function if_init_view(name, info, tp_base, tp_targets) {

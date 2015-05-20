@@ -1,20 +1,21 @@
 controller :root do
-  view :container_split
-  spots "content", "sidebar"
+  view :container
+  spots "content"
     
   action :splash do 
     on_entry %{
       Embed("splash", "content", {})
-      Embed("hierarchy", "sidebar", {})
+    }
+
+    on "device_selected", %{
+      context.sp = params.sp;
+      Goto("dashboard")
     }
   end
-end
 
-controller :rotate do
-  view :rotate
-
-  action :index do
+  action :dashboard do
     on_entry %{
+      Embed("dashboard", "content", context);
     }
   end
 end

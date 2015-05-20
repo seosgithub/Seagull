@@ -1,5 +1,6 @@
 #!/bin/sh
 
+../FittrClientChrome/.run
 ps -ax | grep nwjs | awk '{print $1}' | xargs kill
 cd ./app
 ruby -I/Users/Seo/Development/flok/lib /Users/Seo/Development/flok/bin/flok build CHROME
@@ -7,4 +8,5 @@ cd ..
 cp ./app/products/CHROME/application_user.js ./gui/app/assets/javascripts/
 cp ./app/products/CHROME/drivers/chrome.js ./gui/app/assets/javascripts/
 rake gui:build
+osascript -e 'tell application "Keyboard Maestro Engine" to do script "3B15D84D-30B0-4DC5-91BA-91BBE0AA340B"'
 rake gui:run &

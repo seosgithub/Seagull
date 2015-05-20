@@ -10,7 +10,6 @@ controller :splash do
     }
 
     on "tick", %{
-      console.log("tick");
       var info = {
         url: "http://localhost:3334/search",
         params: {},
@@ -19,13 +18,30 @@ controller :splash do
     }
 
     on "search_res", %{
-      var device = params.info[0];
-      if (device != undefined) {
-        var info = {name: params.info[0].name};
-        Send("found", info);
-      } else {
-        Send("found", null);
-      }
+      var devices = params.info;
+
+      Send("devices_updated", devices);
+    }
+
+    #User selected a device
+    on "device_clicked", %{
+      //Create a connection to the gui socket.io server
+      var sp = tels(1);
+      context.sp = sp;
+      if_sockio_init("http://localhost:4444", sp);
+
+      //Attach this socket to the correct device
+      var info = {
+        id: params.id,
+      };
+      if_sockio_send(sp, "attach", info);
+
+      //raise this request
+      var raise_info = {
+        sp: sp
+      };
+
+      Raise("device_selected", raise_info);
     }
   end
 end

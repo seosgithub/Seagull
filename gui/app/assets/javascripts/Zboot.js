@@ -8,9 +8,140 @@ var SplashController = function() {
   }
 
   this.event = function(name, info) {
-    self.$sel("#devices").html("");
-    if (info) {
-      self.$sel("#devices").append("<li> <img style='display: inline' width=100 src='chrome.png' />" + info.name + "</li>")
+    //Found a new set of devices
+    if (name == "devices_updated") {
+      //Clear old devices
+      self.$sel("#devices").html("");
+
+      //Append new device with data-id for name
+      for (var i = 0; i < info.length; ++i) {
+        self.$sel("#devices").append("<li data-id='" + info[i].id + "'> <img style='display: inline' width=40 src='chrome.png' />" + info[i].name + "</li>");
+
+        //When the user clicks on one, send the device_clicked event along with the id
+        (function() {
+          var _i = i;
+          self.$sel("#devices [data-id='" + info[_i].id + "']").on("click", function() {
+            self.send("device_clicked", {id: info[_i].id});
+          });
+        })()
+      }
+    }
+  }
+}
+
+var ReplController = function() {
+  this.base = FlokController; this.base(); var self = this;
+
+  this.init = function() {
+    self.$sel("button").on("click", function() {
+      var input = self.$sel("input").val();
+
+      self.send("eval", {input: input})
+    });
+  }
+
+  this.action = function(from, to) {
+  }
+
+  this.event = function(name, info) {
+    if (name == "eval_res") {
+      var textarea = self.$sel("textarea");
+      textarea.append(JSON.stringify(info.res));
+      textarea.append("\n")
+    }
+  }
+}
+
+var DashboardController = function() {
+  this.base = FlokController; this.base(); var self = this;
+
+  self.init = function() {
+    self.$sel(".tab").on("click", function() {
+      var name = $(this).attr("data-event");
+      self.send(name, {});
+    });
+  }
+
+  self.action = function(from, to) {
+    self.$sel(".tab").removeClass('tabopen')
+    self.$sel(".tab[data-name='" + to + "']").addClass("tabopen")
+  }
+
+  self.event = function(name, info) {
+  }
+}
+
+var HierarchySelectorController = function() {
+  this.base = FlokController; this.base(); var self = this;
+
+  self.init = function() {
+  }
+
+  self.action = function(from, to) {
+  }
+
+  self.event = function(name, info) {
+    function _process(node, $ssel) {
+      var uuid = UUID();
+      var name = node.name;
+      if (node.type == 'vc') {
+        name = (name+"#"+node.action)
+      }
+      $ssel.append("<li data-ptr='" + node.ptr + "' class='" + node.type + "'><span class='name'>" + name + "</span> </li><ul data-uuid='" + uuid + "'></ul>");
+
+      //The actual node we just added
+      var $node = $ssel.find("[data-ptr='" + node.ptr + "']");
+
+      //Handle highlighting
+      ///////////////////////////////////////////////////
+      $node.on("mouseenter", function() {
+        var ptr = $(this).attr("data-ptr");
+        self.send("highlight", {ptr: ptr, on: true});
+      });
+      $node.on("mouseleave", function() {
+        var ptr = $(this).attr("data-ptr");
+        self.send("highlight", {ptr: ptr, on: false});
+      });
+      if (node.type === "vc") {
+        $node.on("click", function() {
+          var ptr = $(this).attr("data-ptr");
+          self.send("vc_clicked", {ptr: ptr});
+        });
+      }
+      ///////////////////////////////////////////////////
+
+      //The children
+      var $ul = $ssel.find("[data-uuid='" + uuid + "']");
+      for (var i = 0; i < node.children.length; ++i) {
+        var child = node.children[i];
+        _process(child, $ul);
+      }
+    }
+
+    console.error(name);
+    if (name === "hierarchy_updated") {
+      _process(info, self.$sel("#nodes"));
+    } else if (name === "vc_selected") {
+      var ptr = info.ptr;
+      self.$sel(".vc").removeClass('selected');
+      console.error(ptr.toString());
+      self.$sel(".vc[data-ptr='" + ptr + "']").addClass('selected');
+    }
+  }
+}
+
+var HierarchyVCInfoController = function() {
+  this.base = FlokController; this.base(); var self = this;
+
+  self.init = function() {
+  }
+
+  self.action = function(from, to) {
+  }
+
+  self.event = function(name, info) {
+    if (name === "context_update") {
+      self.$sel("textarea").val(JSON.stringify(info));
     }
   }
 }
@@ -97,7 +228,6 @@ var RotateController = function() {
       camera.position.z -= e.wheelDelta/600.0;
     });
   }
-
   this.action = function(from, to) {
   }
 
@@ -107,9 +237,13 @@ var RotateController = function() {
 
 $(document).ready(function() {
   regController("splash", SplashController);
+  regController("dashboard", DashboardController);
   regController("rotate", RotateController);
+  regController("repl", ReplController);
+  regController("hierarchy_selector", HierarchySelectorController);
+  regController("hierarchy_vc_info", HierarchyVCInfoController);
 
-  _embed("root", 0, {});
   int_dispatch([]);
   if_timer_init(4);
+  _embed("root", 0, {});
 });

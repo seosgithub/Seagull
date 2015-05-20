@@ -1,0 +1,46 @@
+[data-name='hierarchy_selector'] li {
+}
+
+[data-name='hierarchy_selector'] li.view {
+  list-style-image: url('view.png');
+  height: 40px;
+  margin-bottom: 10px;
+  font-size: 20px;
+}
+
+[data-name='hierarchy_selector'] li.view .name {
+  position: relative;
+  top: -10px;
+}
+
+[data-name='hierarchy_selector'] li.vc > .name {
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+	font-size: 20px;
+	font-style: normal;
+	font-variant: normal;
+	font-weight: 500;
+  background-color: skyblue;
+	line-height: 26px;
+  padding: 5px;
+  padding-left: 15px;
+  padding-right: 15px;
+}
+
+[data-name='hierarchy_selector'] li.vc {
+  list-style-type: none;
+}
+
+[data-name='hierarchy_selector'] li.vc.selected > .name {
+  background-color: red;
+}
+
+[data-name='hierarchy_selector'] li.spot {
+  list-style-image: url('spot.png');
+  height: 40px;
+  margin-bottom: 10px;
+}
+
+[data-name='hierarchy_selector'] li.spot .name {
+  position: relative;
+  top: -10px;
+}

@@ -1,6 +1,19 @@
 
 //The view-controller hierarchy is managed by this set of functions.
 
+
+  //Maintain type information for pointers
+  //Is it a spot ('spot'), view (main spot) ('view'), or view controller ('vc')?
+  debug_ui_ptr_type = {};
+
+  //Keep track of what view are embedded into spots
+  debug_ui_spot_to_views = {};
+  debug_ui_view_to_spot = {};
+
+  //The first view controller that contains a view attached to the root spot (0)
+  debug_root_vc = null;
+
+
 //Embed a view-controller into a named spot. If spot is null, then it is assumed
 //you are referring to the root-spot.
 function _embed(vc_name, sp, context, event_gw) {
@@ -28,21 +41,47 @@ function _embed(vc_name, sp, context, event_gw) {
 main_q.push([4, "if_init_view", vname, {}, base+1, spots])
     
 main_q.push([4, "if_controller_init", base, base+1, vc_name, context])
+
+    
+      //Keep track of the view-controller attached to root spot (0)
+      if (sp == 0) {
+        debug_root_vc = base;
+      }
+
+      //Track vc
+      debug_ui_ptr_type[base] = 'vc';
+      debug_ui_ptr_type[base+1] = 'view';
+      //Start at 2 because spot[0] is (currently) acting as vc, spot[1] is main view
+      for (var i = 2; i < spots.length; ++i) {
+        debug_ui_ptr_type[base+i] = 'spot';
+      }
+
+      //Track what view is going into the spot
+      debug_ui_spot_to_views[sp] = debug_ui_spot_to_views[sp] || [];
+      debug_ui_spot_to_views[sp].push(base+1);
+      debug_ui_view_to_spot[base+1] = sp;
+    
+
 main_q.push([2, "if_attach_view", base+1, sp])
   spots.shift() //Un-Borrow spots array (it's held in a constant struct, so it *cannot* change)
+
+  //Prep embeds array, embeds[0] refers to the spot bp+2 (bp is vc, bp+1 is main)
+  var embeds = [];
+  for (var i = 1; i < spots.length; ++i) {
+    embeds.push([]);
+  }
 
   //Create controller information struct
   var info = {
     context: context,
     action: action,
     cte: cte,
-    embeds: [],
+    embeds: embeds,
     event_gw: event_gw
   };
 
   //Register controller base with the struct, we already requested base
   tel_reg_ptr(info, base);
-
 
   //Register the event handler callback
   reg_evt(base, controller_event_callback);
@@ -93,8 +132,14 @@ function int_dispatch(q) {
     //Grab the first thing off the queue, this is the arg count
     var argc = q.shift();
 
-    //Grab the next thing and look that up in the function table. Pass args left
-    this[q.shift()].apply(null, q.splice(0, argc));
+    
+      var method_name = q.shift();
+      if (this[method_name] === undefined) {
+        throw "Couldn't find method named: " + method_name;
+      } else {
+        this[method_name].apply(null, q.splice(0, argc));
+      }
+    
   }
 
   //Now push all of what we can back
@@ -267,7 +312,7 @@ function get_req_callback(tp, success, info) {
 }
 
 //Support for the telepathy protocol
-tel_idx = 0
+tel_idx = 3;
 
 //Global table linking telepointers to objects (like functions)
 tel_table = {};
@@ -666,7 +711,7 @@ net_q.push([4, "if_net_req", "GET", info.url, info.params, tp])
   }
   //////////////////////////////////////////////////
 
-MODS = ['ui', 'event', 'net', 'segue', 'controller', 'debug'];
+MODS = ['ui', 'event', 'net', 'segue', 'controller', 'debug', 'sockio'];
 PLATFORM = 'CHROME';
 function int_embed_surface(sp) {
 }
@@ -753,22 +798,445 @@ main_q.push([3, "if_segue_do", rez, from_vp, to_vp])
 reg("modal", "nav_container", "nav_container.detach");
 reg("unmodal", "nav_container", "nav_container.attach");
 
-//Debug stub
+////////////////////////////////////////////////////////////
+//Eval
+////////////////////////////////////////////////////////////
 function int_debug_eval(str) {
   var res = eval(str);
   var payload = {
     res: res
   }
+
 main_q.push([3, "if_event", -333, "eval_res", payload])
 }
 
 function debug_eval_spec() {
   return 'hello';
 }
+
+////////////////////////////////////////////////////////////
+//Dump hierarchy
+////////////////////////////////////////////////////////////
+function int_debug_dump_ui() {
+  //The root spot is not a real spot, it's just the 
+  //starting node that is conventionally refered to
+  //as view with 'pointer 0'.
+  var payload = {
+    name: "root",
+    type: "spot",
+    ptr: 0,
+    children: []
+  };
+
+  //Recurse starting with the root view controller
+  //that was attached to the 'root spot' at ptr 0. There
+  //is only one view controller that will exist here, so
+  //it's set to the only child
+  if (debug_root_vc) {
+    var rvc = {};
+    dump_ui_recurse(debug_root_vc, rvc);
+    payload.children.push(rvc);
+  }
+
+  //Notify with the 'debug' pointer of -333
+main_q.push([3, "if_event", -333, "debug_dump_ui_res", payload])
+}
+
+function dump_ui_recurse(ptr, node) {
+  //What kind of thing does ptr point to? Look it up in the
+  //special debug_ui_ptr_type hash we made
+  //vc - View Controller (always inside a spot)
+  //view - View (always matched below view controller)
+  //spot - Spot (always inside a view)
+  if (debug_ui_ptr_type[ptr] === 'vc') {
+    node['type'] = 'vc';
+    node['ptr'] = ptr;
+
+    //Live controller instance
+    var cinfo = tel_deref(ptr);
+
+    //Get action
+    node['action'] = cinfo.action;
+
+    //Get name from the ctable reference
+    node['name'] = cinfo.cte.name;
+
+    //Recurse with the 'main' view (ptr+1) in this view controller's
+    //first child slot. (there is only one view per view controller)
+    //and it's called 'main' and is always the first child of the vc.
+    node['children'] = [{}];
+    dump_ui_recurse(ptr+1, node['children'][0])
+  } else if (debug_ui_ptr_type[ptr] === 'view') {
+    node['type'] = 'view';
+    node['ptr'] = ptr;
+
+    //The name will be part of the view controller,
+    //we can get the vc ptr by subtracting one from
+    //this view because each view controller's 'main'
+    //spot is this view, and there's only one.
+    var vc_ptr = ptr-1;
+    var cinfo = tel_deref(vc_ptr); //Live controller instance
+    var cte = cinfo.cte;  //Controller table entry (static)
+    node['name'] = cte.root_view;
+
+    //Get a listing of spots, ignore spot 0
+    //because it's actually this view (the main spot)
+    node['children'] = [];
+    for (var i = 1; i < cte.spots.length; ++i) {
+      var sn = {};
+      sn['name'] = cte.spots[i];  //Set the name here, easiest way
+      sn['ptr'] = ptr+i;
+      dump_ui_recurse(ptr+i, sn);
+      node['children'].push(sn);
+    }
+  } else if (debug_ui_ptr_type[ptr] === 'spot') {
+    //Name and ptr is already set in the view recurse portion above
+    node['type'] = 'spot';
+
+    node['children'] = [];
+
+    //Do we have children, are these spots actually filled?
+    var attached_view_ptrs = debug_ui_spot_to_views[ptr];
+    if (attached_view_ptrs !== undefined) {
+      for (var i = 0; i < attached_view_ptrs.length; ++i) {
+        //View controller is located at 1 below the view pointer
+        var bp = attached_view_ptrs[i]-1;
+
+        //Create a new controller node
+        var cnode = {};
+        dump_ui_recurse(bp, cnode);
+        node['children'].push(cnode);
+      }
+    }
+  }
+}
+
+////////////////////////////////////////////////////////////
+//Controller context
+////////////////////////////////////////////////////////////
+function int_debug_controller_context(bp) {
+  var payload = tel_deref(bp).context;
+main_q.push([3, "if_event", -333, "debug_controller_context_res", payload])
+}
+//Stub
 ctable = {
   
+      dashboard: {
+        name: 'dashboard',
+        root_view: 'dashboard',
+        spots: ["main","content"],
+        actions: {
+          
+              hierarchy: {
+                on_entry: function(__base__) {
+                  //Controller information, includes action, etc. (controller_info)
+                  var __info__ = tel_deref(__base__);
+
+                  //The 'context' which is user-defined
+                  var context = __info__.context;
+                  var info = {
+        sp: context.sp
+      }
+
+            var ptr = _embed("hierarchy", __base__+1+1, info, __base__);
+            __info__.embeds[0].push(ptr);
+                },
+                handlers: {
+                  
+                    repl_clicked: function(__base__, params) {
+                      var __info__ = tel_deref(__base__);
+                      var context = __info__.context;
+
+                      
+
+            var old_action = __info__.action;
+            __info__.action = "repl";
+
+            //Remove all views
+            var embeds = __info__.embeds;
+            for (var i = 0; i < __info__.embeds.length; ++i) {
+              for (var j = 0; j < __info__.embeds[i].length; ++j) {
+                //Free +1 because that will be the 'main' view
+                main_q.push([1, "if_free_view", embeds[i][j]+1]);
+
+                
+                  var vp = embeds[i][j]+1;
+                  //First locate spot this view belongs to in reverse hash
+                  var spot = debug_ui_view_to_spot[vp];
+
+                  //Find it's index in the spot
+                  var idx = debug_ui_spot_to_views[spot].indexOf(vp);
+
+                  //Remove it from the spot => [view]
+                  debug_ui_spot_to_views[spot].splice(idx, 1);
+
+                  //Remove it from the reverse hash
+                  delete debug_ui_view_to_spot[vp];
+                
+              }
+            }
+
+            //Send off event for action change
+            main_q.push([3, "if_event", __base__, "action", {
+              from: old_action,
+              to: "repl"
+            }]);
+
+
+            //Prep embeds array, embeds[0] refers to the spot bp+2 (bp is vc, bp+1 is main)
+            __info__.embeds = [];
+            for (var i = 1; i < 2; ++i) {
+              __info__.embeds.push([]);
+            }
+
+            __info__.cte.actions[__info__.action].on_entry(__base__)
+          
+    
+
+                    },
+                  
+                }
+              },
+          
+              repl: {
+                on_entry: function(__base__) {
+                  //Controller information, includes action, etc. (controller_info)
+                  var __info__ = tel_deref(__base__);
+
+                  //The 'context' which is user-defined
+                  var context = __info__.context;
+                  var info = {
+        sp: context.sp
+      }
+
+            var ptr = _embed("repl", __base__+1+1, info, __base__);
+            __info__.embeds[0].push(ptr);
+                },
+                handlers: {
+                  
+                    hierarchy_clicked: function(__base__, params) {
+                      var __info__ = tel_deref(__base__);
+                      var context = __info__.context;
+
+                      
+
+            var old_action = __info__.action;
+            __info__.action = "hierarchy";
+
+            //Remove all views
+            var embeds = __info__.embeds;
+            for (var i = 0; i < __info__.embeds.length; ++i) {
+              for (var j = 0; j < __info__.embeds[i].length; ++j) {
+                //Free +1 because that will be the 'main' view
+                main_q.push([1, "if_free_view", embeds[i][j]+1]);
+
+                
+                  var vp = embeds[i][j]+1;
+                  //First locate spot this view belongs to in reverse hash
+                  var spot = debug_ui_view_to_spot[vp];
+
+                  //Find it's index in the spot
+                  var idx = debug_ui_spot_to_views[spot].indexOf(vp);
+
+                  //Remove it from the spot => [view]
+                  debug_ui_spot_to_views[spot].splice(idx, 1);
+
+                  //Remove it from the reverse hash
+                  delete debug_ui_view_to_spot[vp];
+                
+              }
+            }
+
+            //Send off event for action change
+            main_q.push([3, "if_event", __base__, "action", {
+              from: old_action,
+              to: "hierarchy"
+            }]);
+
+
+            //Prep embeds array, embeds[0] refers to the spot bp+2 (bp is vc, bp+1 is main)
+            __info__.embeds = [];
+            for (var i = 1; i < 2; ++i) {
+              __info__.embeds.push([]);
+            }
+
+            __info__.cte.actions[__info__.action].on_entry(__base__)
+          
+    
+
+                    },
+                  
+                }
+              },
+          
+        },
+      },
+  
       hierarchy: {
+        name: 'hierarchy',
         root_view: 'hierarchy',
+        spots: ["main","selector","info"],
+        actions: {
+          
+              index: {
+                on_entry: function(__base__) {
+                  //Controller information, includes action, etc. (controller_info)
+                  var __info__ = tel_deref(__base__);
+
+                  //The 'context' which is user-defined
+                  var context = __info__.context;
+                  var ptr = _embed("hierarchy_selector", __base__+1+1, context, __base__);
+            __info__.embeds[0].push(ptr);
+          
+
+            var ptr = _embed("hierarchy_vc_info", __base__+2+1, context, __base__);
+            __info__.embeds[1].push(ptr);
+                },
+                handlers: {
+                  
+                    vc_clicked: function(__base__, params) {
+                      var __info__ = tel_deref(__base__);
+                      var context = __info__.context;
+
+                      
+      //Save the clicked vc ptr
+      context.clicked_ptr = params.ptr;
+
+      var info = {
+        ptr: context.clicked_ptr
+      };
+
+
+
+            var vcs = __info__.embeds[0];
+            for (var i = 0; i < vcs.length; ++i) {
+              int_event(vcs[i], "vc_selected", info);
+            }
+          
+
+            var vcs = __info__.embeds[1];
+            for (var i = 0; i < vcs.length; ++i) {
+              int_event(vcs[i], "vc_selected", info);
+            }
+              
+
+                    },
+                  
+                }
+              },
+          
+        },
+      },
+  
+      hierarchy_selector: {
+        name: 'hierarchy_selector',
+        root_view: 'hierarchy_selector',
+        spots: ["main"],
+        actions: {
+          
+              index: {
+                on_entry: function(__base__) {
+                  //Controller information, includes action, etc. (controller_info)
+                  var __info__ = tel_deref(__base__);
+
+                  //The 'context' which is user-defined
+                  var context = __info__.context;
+                  if_sockio_fwd(context.sp, "debug_dump_ui_res", __base__);
+
+      var info = {
+      }
+      if_sockio_send(context.sp, "hierarchy", info);
+                },
+                handlers: {
+                  
+                    vc_selected: function(__base__, params) {
+                      var __info__ = tel_deref(__base__);
+                      var context = __info__.context;
+
+                      
+
+           main_q.push([3, "if_event", __base__, "vc_selected", params])
+              
+
+                    },
+                  
+                    debug_dump_ui_res: function(__base__, params) {
+                      var __info__ = tel_deref(__base__);
+                      var context = __info__.context;
+
+                      
+
+           main_q.push([3, "if_event", __base__, "hierarchy_updated", params])
+              
+
+                    },
+                  
+                    highlight: function(__base__, params) {
+                      var __info__ = tel_deref(__base__);
+                      var context = __info__.context;
+
+                      
+      if_sockio_send(context.sp, "highlight", params);
+    
+
+                    },
+                  
+                }
+              },
+          
+        },
+      },
+  
+      hierarchy_vc_info: {
+        name: 'hierarchy_vc_info',
+        root_view: 'hierarchy_vc_info',
+        spots: ["main"],
+        actions: {
+          
+              index: {
+                on_entry: function(__base__) {
+                  //Controller information, includes action, etc. (controller_info)
+                  var __info__ = tel_deref(__base__);
+
+                  //The 'context' which is user-defined
+                  var context = __info__.context;
+                  if_sockio_fwd(context.sp, "debug_controller_context_res", __base__)
+                },
+                handlers: {
+                  
+                    debug_controller_context_res: function(__base__, params) {
+                      var __info__ = tel_deref(__base__);
+                      var context = __info__.context;
+
+                      
+
+           main_q.push([3, "if_event", __base__, "context_update", params])
+              
+
+                    },
+                  
+                    vc_selected: function(__base__, params) {
+                      var __info__ = tel_deref(__base__);
+                      var context = __info__.context;
+
+                      
+      var info = {
+        bp: params.ptr,
+      }
+      if_sockio_send(context.sp, "int_debug_controller_context", info);
+    
+
+                    },
+                  
+                }
+              },
+          
+        },
+      },
+  
+      json_info: {
+        name: 'json_info',
+        root_view: 'json_info',
         spots: ["main"],
         actions: {
           
@@ -789,9 +1257,63 @@ ctable = {
         },
       },
   
+      repl: {
+        name: 'repl',
+        root_view: 'repl',
+        spots: ["main"],
+        actions: {
+          
+              index: {
+                on_entry: function(__base__) {
+                  //Controller information, includes action, etc. (controller_info)
+                  var __info__ = tel_deref(__base__);
+
+                  //The 'context' which is user-defined
+                  var context = __info__.context;
+                  if_sockio_fwd(context.sp, "eval_res", __base__);
+                },
+                handlers: {
+                  
+                    eval_res: function(__base__, params) {
+                      var __info__ = tel_deref(__base__);
+                      var context = __info__.context;
+
+                      
+      var k = params.res;
+      var eval_res = {
+        res: k[0][5].res
+      }
+
+
+           main_q.push([3, "if_event", __base__, "eval_res", eval_res])
+              
+
+                    },
+                  
+                    eval: function(__base__, params) {
+                      var __info__ = tel_deref(__base__);
+                      var context = __info__.context;
+
+                      
+      var str = params.input;
+      var info = {
+        str: str
+      }
+      if_sockio_send(context.sp, "eval", info);
+    
+
+                    },
+                  
+                }
+              },
+          
+        },
+      },
+  
       root: {
-        root_view: 'container_split',
-        spots: ["main","content","sidebar"],
+        name: 'root',
+        root_view: 'container',
+        spots: ["main","content"],
         actions: {
           
               splash: {
@@ -802,33 +1324,75 @@ ctable = {
                   //The 'context' which is user-defined
                   var context = __info__.context;
                   var ptr = _embed("splash", __base__+1+1, {}, __base__);
-            __info__.embeds.push(ptr);
-          
-
-            var ptr = _embed("hierarchy", __base__+2+1, {}, __base__);
-            __info__.embeds.push(ptr);
+            __info__.embeds[0].push(ptr);
                 },
                 handlers: {
+                  
+                    device_selected: function(__base__, params) {
+                      var __info__ = tel_deref(__base__);
+                      var context = __info__.context;
+
+                      
+      context.sp = params.sp;
+
+            var old_action = __info__.action;
+            __info__.action = "dashboard";
+
+            //Remove all views
+            var embeds = __info__.embeds;
+            for (var i = 0; i < __info__.embeds.length; ++i) {
+              for (var j = 0; j < __info__.embeds[i].length; ++j) {
+                //Free +1 because that will be the 'main' view
+                main_q.push([1, "if_free_view", embeds[i][j]+1]);
+
+                
+                  var vp = embeds[i][j]+1;
+                  //First locate spot this view belongs to in reverse hash
+                  var spot = debug_ui_view_to_spot[vp];
+
+                  //Find it's index in the spot
+                  var idx = debug_ui_spot_to_views[spot].indexOf(vp);
+
+                  //Remove it from the spot => [view]
+                  debug_ui_spot_to_views[spot].splice(idx, 1);
+
+                  //Remove it from the reverse hash
+                  delete debug_ui_view_to_spot[vp];
+                
+              }
+            }
+
+            //Send off event for action change
+            main_q.push([3, "if_event", __base__, "action", {
+              from: old_action,
+              to: "dashboard"
+            }]);
+
+
+            //Prep embeds array, embeds[0] refers to the spot bp+2 (bp is vc, bp+1 is main)
+            __info__.embeds = [];
+            for (var i = 1; i < 2; ++i) {
+              __info__.embeds.push([]);
+            }
+
+            __info__.cte.actions[__info__.action].on_entry(__base__)
+          
+    
+
+                    },
                   
                 }
               },
           
-        },
-      },
-  
-      rotate: {
-        root_view: 'rotate',
-        spots: ["main"],
-        actions: {
-          
-              index: {
+              dashboard: {
                 on_entry: function(__base__) {
                   //Controller information, includes action, etc. (controller_info)
                   var __info__ = tel_deref(__base__);
 
                   //The 'context' which is user-defined
                   var context = __info__.context;
-                  
+                  var ptr = _embed("dashboard", __base__+1+1, context, __base__);
+            __info__.embeds[0].push(ptr);
                 },
                 handlers: {
                   
@@ -839,6 +1403,7 @@ ctable = {
       },
   
       splash: {
+        name: 'splash',
         root_view: 'splash',
         spots: ["main"],
         actions: {
@@ -863,7 +1428,6 @@ ctable = {
                       var context = __info__.context;
 
                       
-      console.log("tick");
       var info = {
         url: "http://localhost:3334/search",
         params: {},
@@ -879,16 +1443,38 @@ ctable = {
                       var context = __info__.context;
 
                       
-      var device = params.info[0];
-      if (device != undefined) {
-        var info = {name: params.info[0].name};
+      var devices = params.info;
 
-           main_q.push([3, "if_event", __base__, "found", info])
-                } else {
 
-           main_q.push([3, "if_event", __base__, "found", null])
-                }
-    
+           main_q.push([3, "if_event", __base__, "devices_updated", devices])
+              
+
+                    },
+                  
+                    device_clicked: function(__base__, params) {
+                      var __info__ = tel_deref(__base__);
+                      var context = __info__.context;
+
+                      
+      //Create a connection to the gui socket.io server
+      var sp = tels(1);
+      context.sp = sp;
+      if_sockio_init("http://localhost:4444", sp);
+
+      //Attach this socket to the correct device
+      var info = {
+        id: params.id,
+      };
+      if_sockio_send(sp, "attach", info);
+
+      //raise this request
+      var raise_info = {
+        sp: sp
+      };
+
+
+            int_event(__info__.event_gw, "device_selected", raise_info);
+              
 
                     },
                   

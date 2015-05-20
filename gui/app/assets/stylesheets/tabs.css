@@ -1,0 +1,29 @@
+@font-face
+{
+font-family: Roboto;
+src: url('http://piruby.com/android/Roboto-Regular.ttf');
+}
+
+.tabs {
+  width: 100%;
+  height: 60px;
+	z-index: 1000;
+  z-index=1;
+}
+
+.tabopen {
+  background-color: #333!important;
+}
+
+.tab {
+  font-family: Roboto;
+	float: left;
+  color: #FFFFFF;
+  text-align: center;
+  background-color: white;
+}
+
+.tab:hover {
+  background-color: #555;
+  cursor: pointer;
+}
