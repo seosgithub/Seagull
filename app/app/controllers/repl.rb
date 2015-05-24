@@ -1,6 +1,4 @@
 controller :repl do
-  view "repl"
-
   action :index do
     on_entry %{
       if_sockio_fwd(context.sp, "eval_res", __base__);

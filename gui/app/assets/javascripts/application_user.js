@@ -712,7 +712,7 @@ net_q.push([4, "if_net_req", "GET", info.url, info.params, tp])
   //////////////////////////////////////////////////
 
 MODS = ['ui', 'event', 'net', 'segue', 'controller', 'debug', 'sockio'];
-PLATFORM = 'CHROME';
+PLATFORM = 'chrome';
 function int_embed_surface(sp) {
 }
 //Event handler table
@@ -854,12 +854,17 @@ function dump_ui_recurse(ptr, node) {
 
     //Live controller instance
     var cinfo = tel_deref(ptr);
+    var cte = cinfo.cte;
 
     //Get action
-    node['action'] = cinfo.action;
+    var action = cinfo.action;
+    node['action'] = action;
 
     //Get name from the ctable reference
-    node['name'] = cinfo.cte.name;
+    node['name'] = cte.name;
+
+    //Get a list of events that this action responds to
+    node['events'] = Object.keys(cte.actions[action].handlers);
 
     //Recurse with the 'main' view (ptr+1) in this view controller's
     //first child slot. (there is only one view per view controller)
@@ -912,11 +917,18 @@ function dump_ui_recurse(ptr, node) {
 }
 
 ////////////////////////////////////////////////////////////
-//Controller context
+//Controller describe
 ////////////////////////////////////////////////////////////
-function int_debug_controller_context(bp) {
-  var payload = tel_deref(bp).context;
-main_q.push([3, "if_event", -333, "debug_controller_context_res", payload])
+function int_debug_controller_describe(bp) {
+  //Grab the controller's instance and table entry
+  var cinfo = tel_deref(bp);
+  var cte = cinfo.cte;
+
+  var payload = {
+    context: cinfo.context,
+    events: Object.keys(cte.actions[cinfo.action].handlers) 
+  };
+main_q.push([3, "if_event", -333, "debug_controller_describe_res", payload])
 }
 //Stub
 ctable = {
@@ -1200,17 +1212,19 @@ ctable = {
 
                   //The 'context' which is user-defined
                   var context = __info__.context;
-                  if_sockio_fwd(context.sp, "debug_controller_context_res", __base__)
+                  if_sockio_fwd(context.sp, "debug_controller_describe_res", __base__)
                 },
                 handlers: {
                   
-                    debug_controller_context_res: function(__base__, params) {
+                    debug_controller_describe_res: function(__base__, params) {
                       var __info__ = tel_deref(__base__);
                       var context = __info__.context;
 
                       
 
-           main_q.push([3, "if_event", __base__, "context_update", params])
+           main_q.push([3, "if_event", __base__, "context_update", params.context])
+          
+           main_q.push([3, "if_event", __base__, "events_update", params.events])
               
 
                     },
@@ -1223,7 +1237,7 @@ ctable = {
       var info = {
         bp: params.ptr,
       }
-      if_sockio_send(context.sp, "int_debug_controller_context", info);
+      if_sockio_send(context.sp, "int_debug_controller_describe", info);
     
 
                     },
@@ -1312,7 +1326,7 @@ ctable = {
   
       root: {
         name: 'root',
-        root_view: 'container',
+        root_view: 'root',
         spots: ["main","content"],
         actions: {
           

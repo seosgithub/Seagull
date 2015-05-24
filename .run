@@ -3,7 +3,7 @@
 ../FittrClientChrome/.run
 ps -ax | grep nwjs | awk '{print $1}' | xargs kill
 cd ./app
-ruby -I/Users/Seo/Development/flok/lib /Users/Seo/Development/flok/bin/flok build CHROME
+ruby -I/Users/Seo/Development/flok/lib /Users/Seo/Development/flok/bin/flok build
 cd ..
 cp ./app/products/CHROME/application_user.js ./gui/app/assets/javascripts/
 cp ./app/products/CHROME/drivers/chrome.js ./gui/app/assets/javascripts/

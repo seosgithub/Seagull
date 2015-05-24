@@ -1,5 +1,4 @@
 controller :hierarchy do
-  view :hierarchy
   spots "selector", "info"
 
   action "index" do
@@ -23,8 +22,6 @@ controller :hierarchy do
 end
 
 controller :hierarchy_selector do
-  view :hierarchy_selector
-
   action "index" do
     on_entry %{
       if_sockio_fwd(context.sp, "debug_dump_ui_res", __base__);
@@ -50,22 +47,21 @@ controller :hierarchy_selector do
 end
 
 controller :hierarchy_vc_info do
-  view :hierarchy_vc_info
-
   action "index" do
     on_entry %{
-      if_sockio_fwd(context.sp, "debug_controller_context_res", __base__)
+      if_sockio_fwd(context.sp, "debug_controller_describe_res", __base__)
     }
 
-    on "debug_controller_context_res", %{
-      Send("context_update", params);
+    on "debug_controller_describe_res", %{
+      Send("context_update", params.context);
+      Send("events_update", params.events);
     }
 
     on "vc_selected", %{
       var info = {
         bp: params.ptr,
       }
-      if_sockio_send(context.sp, "int_debug_controller_context", info);
+      if_sockio_send(context.sp, "int_debug_controller_describe", info);
     }
   end
 end

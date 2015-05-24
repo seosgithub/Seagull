@@ -1,7 +1,5 @@
 controller :dashboard do
-  view :dashboard
   spots "content"
-
   
   action :hierarchy do
     on_entry %{

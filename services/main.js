@@ -111,8 +111,8 @@ ios2.on('connection', function(socket) {
       _socket.emit("int_dispatch", [1, "int_debug_eval", info.str]);
     });
 
-    socket.on("int_debug_controller_context", function(info) {
-      _socket.emit("int_dispatch", [1, "int_debug_controller_context", info.bp]);
+    socket.on("int_debug_controller_describe", function(info) {
+      _socket.emit("int_dispatch", [1, "int_debug_controller_describe", info.bp]);
     });
 
     socket.on("hierarchy", function(info) {

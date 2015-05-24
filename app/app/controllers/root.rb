@@ -1,5 +1,4 @@
 controller :root do
-  view :container
   spots "content"
     
   action :splash do 
