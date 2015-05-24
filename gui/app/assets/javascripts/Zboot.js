@@ -143,7 +143,8 @@ var HierarchyVCInfoController = function() {
     if (name === "context_update") {
       self.$sel("textarea#context").val(JSON.stringify(info));
     } else if (name === "events_update") {
-      self.$sel("textarea#events").val(JSON.stringify(info));
+      var $events = self.$sel("#events") ;
+      $events.val(JSON.stringify(info));
     }
   }
 }
