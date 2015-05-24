@@ -7,6 +7,10 @@ controller :hierarchy do
       Embed("hierarchy_vc_info", "info", context);
     }
 
+    on "reload", %{
+      Goto("index");
+    }
+
     on "vc_clicked", %{
       //Save the clicked vc ptr
       context.clicked_ptr = params.ptr;
@@ -64,6 +68,7 @@ controller :hierarchy_vc_info do
         info: params.info
       };
       if_sockio_send(context.sp, "fwd_int_event", info);
+      Raise("reload", {});
     }
 
     on "vc_selected", %{

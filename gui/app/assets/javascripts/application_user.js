@@ -1106,6 +1106,58 @@ ctable = {
                 },
                 handlers: {
                   
+                    reload: function(__base__, params) {
+                      var __info__ = tel_deref(__base__);
+                      var context = __info__.context;
+
+                      
+
+            var old_action = __info__.action;
+            __info__.action = "index";
+
+            //Remove all views
+            var embeds = __info__.embeds;
+            for (var i = 0; i < __info__.embeds.length; ++i) {
+              for (var j = 0; j < __info__.embeds[i].length; ++j) {
+                //Free +1 because that will be the 'main' view
+                main_q.push([1, "if_free_view", embeds[i][j]+1]);
+
+                
+                  var vp = embeds[i][j]+1;
+                  //First locate spot this view belongs to in reverse hash
+                  var spot = debug_ui_view_to_spot[vp];
+
+                  //Find it's index in the spot
+                  var idx = debug_ui_spot_to_views[spot].indexOf(vp);
+
+                  //Remove it from the spot => [view]
+                  debug_ui_spot_to_views[spot].splice(idx, 1);
+
+                  //Remove it from the reverse hash
+                  delete debug_ui_view_to_spot[vp];
+                
+              }
+            }
+
+            //Send off event for action change
+            main_q.push([3, "if_event", __base__, "action", {
+              from: old_action,
+              to: "index"
+            }]);
+
+
+            //Prep embeds array, embeds[0] refers to the spot bp+2 (bp is vc, bp+1 is main)
+            __info__.embeds = [];
+            for (var i = 1; i < 3; ++i) {
+              __info__.embeds.push([]);
+            }
+
+            __info__.cte.actions[__info__.action].on_entry(__base__)
+          
+    
+
+                    },
+                  
                     vc_clicked: function(__base__, params) {
                       var __info__ = tel_deref(__base__);
                       var context = __info__.context;
@@ -1240,7 +1292,9 @@ ctable = {
         info: params.info
       };
       if_sockio_send(context.sp, "fwd_int_event", info);
-    
+
+            int_event(__info__.event_gw, "reload", {});
+              
 
                     },
                   
