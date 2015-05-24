@@ -111,6 +111,11 @@ ios2.on('connection', function(socket) {
       _socket.emit("int_dispatch", [1, "int_debug_eval", info.str]);
     });
 
+    socket.on("fwd_int_event", function(info) {
+      console.log("got fwd_int_event");
+      _socket.emit("int_dispatch", [3, "int_event", info.bp, info.name, info.info]);
+    });
+
     socket.on("int_debug_controller_describe", function(info) {
       _socket.emit("int_dispatch", [1, "int_debug_controller_describe", info.bp]);
     });

@@ -118,7 +118,6 @@ var HierarchySelectorController = function() {
       }
     }
 
-    console.error(name);
     if (name === "hierarchy_updated") {
       _process(info, self.$sel("#nodes"));
     } else if (name === "vc_selected") {
@@ -140,11 +139,31 @@ var HierarchyVCInfoController = function() {
   }
 
   self.event = function(name, info) {
+    console.log(JSON.stringify(info));
     if (name === "context_update") {
       self.$sel("textarea#context").val(JSON.stringify(info));
     } else if (name === "events_update") {
+      //Get the events list (a box)
       var $events = self.$sel("#events") ;
-      $events.val(JSON.stringify(info));
+
+      //Clear and then append each event as a button
+      $events.html("");
+      for (var i = 0; i < info.length; ++i) {
+        //Add a button
+        var uuid = UUID();
+        $events.append("<li><button id='" + uuid + "' data-emit='" + info[i] + "'>"+info[i]+"</button></li>");
+
+        $("#"+uuid).on("click", function() {
+          var emit = $(this).attr("data-emit");
+
+          //Send an event to the if interface (NOT THIS APP!!)
+          var params = {
+            name: emit,
+            info: {}
+          };
+          self.send("fwd_int_event", params);
+        });
+      }
     }
   }
 }

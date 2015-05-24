@@ -57,7 +57,18 @@ controller :hierarchy_vc_info do
       Send("events_update", params.events);
     }
 
+    on "fwd_int_event", %{
+      var info = {
+        bp: context.selected_vc,
+        name: params.name,
+        info: params.info
+      };
+      if_sockio_send(context.sp, "fwd_int_event", info);
+    }
+
     on "vc_selected", %{
+      context.selected_vc = params.ptr;
+
       var info = {
         bp: params.ptr,
       }

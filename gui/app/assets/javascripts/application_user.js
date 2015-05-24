@@ -1229,11 +1229,28 @@ ctable = {
 
                     },
                   
+                    fwd_int_event: function(__base__, params) {
+                      var __info__ = tel_deref(__base__);
+                      var context = __info__.context;
+
+                      
+      var info = {
+        bp: context.selected_vc,
+        name: params.name,
+        info: params.info
+      };
+      if_sockio_send(context.sp, "fwd_int_event", info);
+    
+
+                    },
+                  
                     vc_selected: function(__base__, params) {
                       var __info__ = tel_deref(__base__);
                       var context = __info__.context;
 
                       
+      context.selected_vc = params.ptr;
+
       var info = {
         bp: params.ptr,
       }
