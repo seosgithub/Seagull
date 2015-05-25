@@ -32,8 +32,8 @@ controller :hierarchy_selector do
 
       var info = {
       }
-      if_sockio_send(context.sp, "hierarchy", info);
 
+      if_sockio_send(context.sp, "hierarchy", info);
     }
 
     on "vc_selected", %{
@@ -67,6 +67,7 @@ controller :hierarchy_vc_info do
         name: params.name,
         info: params.info
       };
+
       if_sockio_send(context.sp, "fwd_int_event", info);
       Raise("reload", {});
     }

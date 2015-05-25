@@ -331,7 +331,6 @@ function ping2(arg1, arg2) {
 }
 
 function if_event(ep, name, info) {
-  
   //Dispatch to controller if cinstances defines ep
   if (cinstances[ep] !== undefined) {
     if (name == "action") {

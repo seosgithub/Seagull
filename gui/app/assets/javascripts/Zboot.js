@@ -105,7 +105,7 @@ var HierarchySelectorController = function() {
       if (node.type === "vc") {
         $node.on("click", function() {
           var ptr = $(this).attr("data-ptr");
-          self.send("vc_clicked", {ptr: ptr});
+          self.send("vc_clicked", {ptr: +ptr});
         });
       }
       ///////////////////////////////////////////////////
